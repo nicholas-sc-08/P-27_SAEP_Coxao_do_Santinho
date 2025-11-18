@@ -70,17 +70,17 @@ app.post('/auth/login', async (req, res) => {
 });
 
 // -----------------------------
-// PRODUTOS (modelos de meias)
+// ferramentas (modelos de meias)
 // -----------------------------
 
-// listar produtos (ordem alfabética, busca opcional ?q=)
-app.get('/produtos', async (req, res) => {
+// listar ferramentas (ordem alfabética, busca opcional ?q=)
+app.get('/ferramentas', async (req, res) => {
   const q = (req.query.q || '').trim();
   const hasQ = q.length > 0;
   const sql =
     `SELECT id, nome, quantidade, estoque_minimo,
             (quantidade < estoque_minimo) AS abaixo_do_minimo
-       FROM produtos
+       FROM ferramentas
       ${hasQ ? 'WHERE lower(nome) LIKE lower($1)' : ''}
       ORDER BY nome ASC`;
   try {
@@ -91,12 +91,12 @@ app.get('/produtos', async (req, res) => {
 });
 
 // obter 1 produto
-app.get('/produtos/:id', async (req, res) => {
+app.get('/ferramentas/:id', async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT id, nome, quantidade, estoque_minimo,
               (quantidade < estoque_minimo) AS abaixo_do_minimo
-         FROM produtos WHERE id=$1`,
+         FROM ferramentas WHERE id=$1`,
       [req.params.id]
     );
     if (!r.rows.length) return fail(res, 'Produto não encontrado', 404);
@@ -105,12 +105,12 @@ app.get('/produtos/:id', async (req, res) => {
 });
 
 // criar produto
-app.post('/produtos', async (req, res) => {
+app.post('/ferramentas', async (req, res) => {
   const { nome, quantidade = 0, estoque_minimo = 0 } = req.body || {};
   if (!nome) return fail(res, 'Campo obrigatório: nome', 400);
   try {
     const r = await pool.query(
-      `INSERT INTO produtos (nome, quantidade, estoque_minimo)
+      `INSERT INTO ferramentas (nome, quantidade, estoque_minimo)
        VALUES ($1,$2,$3)
        RETURNING id, nome, quantidade, estoque_minimo`,
       [nome, Number(quantidade) || 0, Number(estoque_minimo) || 0]
@@ -120,11 +120,11 @@ app.post('/produtos', async (req, res) => {
 });
 
 // atualizar produto
-app.put('/produtos/:id', async (req, res) => {
+app.put('/ferramentas/:id', async (req, res) => {
   const { nome, quantidade, estoque_minimo } = req.body || {};
   try {
     const r = await pool.query(
-      `UPDATE produtos
+      `UPDATE ferramentas
           SET nome = COALESCE($1, nome),
               quantidade = COALESCE($2, quantidade),
               estoque_minimo = COALESCE($3, estoque_minimo)
@@ -138,9 +138,9 @@ app.put('/produtos/:id', async (req, res) => {
 });
 
 // deletar produto
-app.delete('/produtos/:id', async (req, res) => {
+app.delete('/ferramentas/:id', async (req, res) => {
   try {
-    const r = await pool.query('DELETE FROM produtos WHERE id=$1 RETURNING id', [req.params.id]);
+    const r = await pool.query('DELETE FROM ferramentas WHERE id=$1 RETURNING id', [req.params.id]);
     if (!r.rows.length) return fail(res, 'Produto não encontrado', 404);
     ok(res, { message: 'Produto excluído' });
   } catch (e) { fail(res, e); }
@@ -167,7 +167,7 @@ app.post('/movimentacoes', async (req, res) => {
 
     // atualiza saldo
     const up = await client.query(
-      'UPDATE produtos SET quantidade = quantidade + $1 WHERE id=$2 RETURNING id, nome, quantidade, estoque_minimo',
+      'UPDATE ferramentas SET quantidade = quantidade + $1 WHERE id=$2 RETURNING id, nome, quantidade, estoque_minimo',
       [delta, produto_id]
     );
     if (!up.rows.length) {
@@ -210,7 +210,7 @@ app.get('/movimentacoes', async (req, res) => {
            m.usuario_id, u.nome AS responsavel_nome,
            m.tipo, m.quantidade, m.data_movimentacao, m.observacao
       FROM movimentacoes m
-      JOIN produtos p ON p.id = m.produto_id
+      JOIN ferramentas p ON p.id = m.produto_id
       JOIN usuarios u ON u.id = m.usuario_id
      ${hasFilter ? 'WHERE m.produto_id = $1' : ''}
      ORDER BY m.data_movimentacao DESC, m.id DESC
